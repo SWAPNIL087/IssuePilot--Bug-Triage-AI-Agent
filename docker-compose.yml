@@ -1,0 +1,7 @@
+services:
+  triageguard:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env   # secrets stay in .env, never baked into the image
+    restart: unless-stopped

@@ -1,0 +1,10 @@
+.git
+.env
+.venv
+**/__pycache__
+*.egg-info
+output
+escalations.jsonl
+tickets
+evals
+tests

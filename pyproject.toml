@@ -9,6 +9,9 @@ description = "Ticket triage agent: replies only from the help docs, escalates t
 requires-python = ">=3.10"
 dependencies = ["openai>=1.40"]
 
+[project.optional-dependencies]
+api = ["fastapi>=0.110", "uvicorn>=0.27"]
+
 [project.scripts]
 triageguard = "triageguard.cli:main"
 
