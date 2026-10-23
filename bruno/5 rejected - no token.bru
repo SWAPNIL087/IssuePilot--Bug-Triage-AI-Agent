@@ -1,0 +1,23 @@
+meta {
+  name: 5 rejected - no token
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base}}/tickets
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "body": "hi"
+  }
+}
+
+tests {
+  test("401 without a token", function () {
+    expect(res.status).to.equal(401);
+  });
+}

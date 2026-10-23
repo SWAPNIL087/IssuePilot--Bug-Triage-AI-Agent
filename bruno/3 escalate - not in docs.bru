@@ -1,0 +1,29 @@
+meta {
+  name: 3 escalate - not in docs
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base}}/tickets
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "id": "bruno-escalate",
+    "body": "Do you offer a student discount?"
+  }
+}
+
+tests {
+  test("escalated to a human", function () {
+    expect(res.status).to.equal(200);
+    expect(res.body.decision).to.equal("ESCALATE");
+  });
+}

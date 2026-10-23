@@ -6,6 +6,25 @@ sample:
 
 Reads support tickets from files, searches a local help-article corpus, and either **replies with cited answers** or **escalates** to a human. See [DESIGN.md](DESIGN.md).
 
+## Live demo (private pilot)
+
+Base URL: **https://issuepilot-bug-triage-ai-agent.onrender.com**
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `GET /health` | none | is it up? |
+| `POST /tickets` | `Authorization: Bearer <token>` | submit a ticket, get `REPLY` or `ESCALATE` |
+| `GET /docs` | none | interactive API page |
+
+The ticket endpoint needs a token, which is not published here. Ask the maintainer (@SWAPNIL087) for one. The service runs on a free instance: it sleeps after 15 minutes idle, so the first request can take about a minute, and the LLM allows roughly 7 tickets per minute.
+
+```
+curl -X POST https://issuepilot-bug-triage-ai-agent.onrender.com/tickets \
+  -H "Authorization: Bearer <token>" -H "Content-Type: application/json" \
+  -d '{"subject": "Password", "body": "I forgot my password, how do I reset it?"}'
+```
+
+**Bruno:** open the [bruno/](bruno) folder as a collection, choose the `render` environment, and set its secret variable `token`. Requests 1 to 5 cover health, a grounded reply, two escalations and an auth failure, each with a test.
 ## Setup
 
 ```
