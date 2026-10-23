@@ -1,9 +1,3 @@
----
-title: TriageGuard
-sdk: docker
-app_port: 8000
----
-
 # TriageGuard
 
 Reads support tickets from files, searches a local help-article corpus, and either **replies with cited answers** or **escalates** to a human. See [DESIGN.md](DESIGN.md).
@@ -53,13 +47,9 @@ docker compose up --build      # reads secrets from .env, serves http://localhos
 
 ### Free hosting
 
-Hosts build the `Dockerfile` for you, so you don't need Docker installed locally. Set `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `TRIAGEGUARD_MODEL` and `TRIAGEGUARD_API_TOKEN` as the host's secret/environment variables, never in the repo.
+Render builds the `Dockerfile` for you, so you don't need Docker installed locally. Render > New > Web Service > this repo > Language **Docker** > Instance type **Free** > set Health Check Path to `/health`. Add `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `TRIAGEGUARD_MODEL` and `TRIAGEGUARD_API_TOKEN` as environment variables on the service, never in the repo.
 
-- **Render** (free web service): New > Web Service > this repo > Docker > Free instance. Sleeps after 15 minutes idle; the disk is ephemeral. Currently asks for a card at sign-up.
-- **Hugging Face Spaces** (Docker SDK): free CPU, no card. The README header already sets `sdk: docker` and `app_port: 8000`; put the variables in the Space secrets.
-
-Free hosts lose `output/` on restart, so read decisions from the response and the logs. Check each host's current free-tier terms.
-
+Free instances sleep after 15 minutes idle (the next request takes about a minute), have an ephemeral disk (read decisions from the response and the logs, not `output/`), and are not meant for production. Free tiers change often, so check Render's current free-instance docs. Hugging Face Spaces no longer offers Docker Spaces on the free plan.
 ## Test
 
 ```
