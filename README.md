@@ -1,3 +1,7 @@
+sample:
+<img width="2297" height="1722" alt="image" src="https://github.com/user-attachments/assets/17fb0495-c156-4498-b47d-f3fa04deb364" />
+
+
 # TriageGuard
 
 Reads support tickets from files, searches a local help-article corpus, and either **replies with cited answers** or **escalates** to a human. See [DESIGN.md](DESIGN.md).
