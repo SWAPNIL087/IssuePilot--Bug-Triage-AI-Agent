@@ -44,13 +44,17 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["decision"], "REPLY")
         self.assertIn("Account Access › Resetting your password", r.json()["sources"])
+        self.assertTrue(r.json()["customer_message"].startswith("Use the reset link"))
         self.assertEqual(self.client.post("/tickets", json={"body": "  "}, headers=self.auth).status_code, 422)
+        self.assertEqual(os.listdir(self.tmp.name), [])  # nothing is written to disk
 
     def test_escalation(self):
         api.app.state.llm = fake_llm(analysis={"wants_human": True})
         r = self.client.post("/tickets", json={"body": "give me a human"}, headers=self.auth)
         self.assertEqual(r.json()["decision"], "ESCALATE")
         self.assertEqual(r.json()["reason_code"], "customer_requested_human")
+        self.assertIn("passed your request to our support team", r.json()["customer_message"])
+        self.assertEqual(os.listdir(self.tmp.name), [])  # nothing is written to disk
 
 
 if __name__ == "__main__":

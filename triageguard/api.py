@@ -7,7 +7,8 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from triageguard.actions.output import save, sources
+from triageguard.actions.escalation import HANDOFF
+from triageguard.actions.output import sources
 from triageguard.ai.client import make_llm
 from triageguard.config import Config, load_env
 from triageguard.intake.loader import Ticket, safe_id
@@ -65,7 +66,7 @@ def create_ticket(t: TicketIn) -> dict:
     state = app.state
     log(f"ticket {ticket.id}")
     d = process(ticket, state.kb, state.llm, state.cfg, log)
-    message = save(ticket, d, state.kb, state.cfg)
+    message = d.answer if d.decision == "REPLY" else HANDOFF  # nothing is written to disk; the response is the record
     log(f"ticket {ticket.id} -> {d.decision} {d.reason_code}")
     if d.reason_code in ERRORS:
         raise HTTPException(status_code=503, detail=f"{d.reason_code}: {d.reason}")

@@ -58,7 +58,7 @@ POST /tickets   Authorization: Bearer <token>   {"id": "t-1", "subject": "...", 
 GET  /health
 ```
 
-Response: `decision` (`REPLY` | `ESCALATE`), `customer_message`, `sources`, `reason_code`, `reason`. A `503` means the LLM was unavailable: treat it as "needs a human". The service refuses to start without a token.
+Response: `decision` (`REPLY` | `ESCALATE`), `customer_message`, `sources`, `reason_code`, `reason`. A `503` means the LLM was unavailable: treat it as "needs a human". The service refuses to start without a token. It stores nothing: no files are written, so the response is the only record of a decision.
 
 ### Docker (optional)
 
@@ -72,7 +72,7 @@ docker compose up --build      # reads secrets from .env, serves http://localhos
 
 Render builds the `Dockerfile` for you, so you don't need Docker installed locally. Render > New > Web Service > this repo > Language **Docker** > Instance type **Free** > set Health Check Path to `/health`. Add `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `TRIAGEGUARD_MODEL` and `TRIAGEGUARD_API_TOKEN` as environment variables on the service, never in the repo.
 
-Free instances sleep after 15 minutes idle (the next request takes about a minute), have an ephemeral disk (read decisions from the response and the logs, not `output/`), and are not meant for production. Free tiers change often, so check Render's current free-instance docs. Hugging Face Spaces no longer offers Docker Spaces on the free plan.
+Free instances sleep after 15 minutes idle (the next request takes about a minute), and are not meant for production. Free tiers change often, so check Render's current free-instance docs. Hugging Face Spaces no longer offers Docker Spaces on the free plan.
 ## Test
 
 ```
