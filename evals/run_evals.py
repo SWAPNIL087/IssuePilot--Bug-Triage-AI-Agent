@@ -1,0 +1,41 @@
+"""Run every ticket in evals/cases through the pipeline and compare with its `expect:` outcome."""
+import sys
+from collections import Counter
+from pathlib import Path
+
+from triageguard.config import Config, load_env
+from triageguard.frontmatter import split_front_matter
+from triageguard.knowledge.ingest import load_docs
+from triageguard.ai.client import make_llm
+from triageguard.pipeline import process_file
+from triageguard.knowledge.retriever import Retriever
+
+CASES = Path(__file__).parent / "cases"
+
+
+def main() -> int:
+    load_env()
+    cfg = Config.from_env()
+    kb = Retriever(load_docs(cfg.docs, cfg.chunk_words))
+    log = (lambda m: print(m, flush=True)) if "-v" in sys.argv else (lambda m: None)
+    llm = make_llm(cfg, log)
+
+    tally = Counter()
+    cases = sorted(CASES.iterdir())
+    print(f"Running {len(cases)} cases with {cfg.model} (add -v for step-by-step logs)", flush=True)
+    for i, path in enumerate(cases, 1):
+        print(f"[{i}/{len(cases)}] {path.stem} ...", flush=True)
+        expect = split_front_matter(path.read_text(encoding="utf-8"))[0]["expect"]
+        _, d = process_file(path, kb, llm, cfg, log)
+        outcome = ("ERROR" if d.reason_code == "llm_error" else "ok" if d.decision == expect
+                   else "UNSAFE" if d.decision == "REPLY" else "missed")
+        tally[outcome] += 1
+        print(f"        {outcome:>7}  expected {expect:<8} got {d.decision:<8} {d.reason_code} {d.reason[:90] if outcome != 'ok' else ''}", flush=True)
+
+    print(f"\n{tally['ok']} ok, {tally['missed']} missed (over-escalated), {tally['UNSAFE']} UNSAFE "
+          f"(replied when it should escalate), {tally['ERROR']} ERROR (LLM failed, not a valid result)")
+    return 1 if tally["UNSAFE"] or tally["ERROR"] else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

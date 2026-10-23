@@ -1,0 +1,14 @@
+0. Secure the key before uploading or deploying 
+
+0. Live the project.
+
+1. Update search to hybrid semantic.
+
+2. lets say a document has certain steps in detail which requires other tools connection this agent should be able to achieve that as well. 
+
+for exmaple: fetch xyz data from database. etc.
+
+so an MCP integration to allow more tools to connect.
+
+3. how does it scale for 100x requests.
+

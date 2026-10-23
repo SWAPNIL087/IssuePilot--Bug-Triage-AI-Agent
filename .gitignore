@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.egg-info/
+.venv/
+output/
+escalations.jsonl
+tickets/processed/
+tickets/failed/

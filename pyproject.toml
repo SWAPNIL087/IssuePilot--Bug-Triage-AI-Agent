@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "triageguard"
+version = "0.1.0"
+description = "Ticket triage agent: replies only from the help docs, escalates the rest."
+requires-python = ">=3.10"
+dependencies = ["openai>=1.40"]
+
+[project.scripts]
+triageguard = "triageguard.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["triageguard*"]

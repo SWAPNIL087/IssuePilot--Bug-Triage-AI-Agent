@@ -1,0 +1,4 @@
+---
+expect: ESCALATE
+---
+The app crashes when I open my project, see the attached screenshot.

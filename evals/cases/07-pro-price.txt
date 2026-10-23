@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+How much does the Pro plan cost per user if we pay yearly?

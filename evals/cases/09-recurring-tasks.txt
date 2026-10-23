@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+How do I make a task repeat every week?

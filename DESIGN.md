@@ -1,4 +1,4 @@
-# TriageGuard: Design Document
+﻿# TriageGuard: Design Document
 
 Status: Draft for review
 Scope: Terminal agent that reads customer tickets from files, answers only from a local help-article corpus, and escalates to a human otherwise.
@@ -311,18 +311,14 @@ triageguard/
 │  └─ failed/                  # could not be processed
 ├─ output/                     # <id>.result.json, <id>.reply.md, <id>.escalate.json
 ├─ escalations.jsonl           # running escalation log (the future integration seam)
-├─ src/
-│  ├─ cli.py                   # argument parsing, modes, terminal output
-│  ├─ pipeline.py              # process(ticket) -> Decision, used by all modes
-│  ├─ loader.py                # file -> Ticket
-│  ├─ ingest.py                # docs -> chunks
-│  ├─ retriever.py             # search + scoring
-│  ├─ analyzer.py              # ticket -> structured analysis (LLM)
-│  ├─ generator.py             # grounded answer (LLM)
-│  ├─ validator.py             # Gate 2 checks (pure code)
-│  ├─ escalation.py            # stub: print + log
-│  ├─ llm.py                   # thin wrapper around the LLM provider
-│  └─ config.py                # thresholds, model, paths
+├─ triageguard/                # the package
+│  ├─ cli.py  config.py  pipeline.py   # modes + output, settings, process(ticket) -> Decision
+│  ├─ frontmatter.py           # shared `key: value` header parser
+│  ├─ intake/    loader.py             # file -> Ticket
+│  ├─ knowledge/ ingest.py retriever.py   # docs -> chunks, search + scoring
+│  ├─ ai/        client.py analyzer.py generator.py   # provider wrapper, the two LLM calls
+│  ├─ safety/    validator.py          # Gate 2 checks (pure code)
+│  └─ actions/   escalation.py output.py   # escalation stub (seam), result files
 ├─ evals/
 │  ├─ cases/                   # ticket files + expected outcome
 │  └─ run_evals.py

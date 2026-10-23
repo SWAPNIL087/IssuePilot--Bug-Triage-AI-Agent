@@ -1,0 +1,5 @@
+---
+id: t-1001
+subject: Can't log in
+---
+Hi, I forgot my password. How do I reset it?
