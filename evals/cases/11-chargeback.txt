@@ -1,0 +1,4 @@
+---
+expect: ESCALATE
+---
+There is a charge on my card I don't recognize and I never authorized it. I'm disputing it with my bank.

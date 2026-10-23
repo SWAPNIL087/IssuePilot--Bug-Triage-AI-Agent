@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+Can I get task notifications in Slack? How do I connect it?

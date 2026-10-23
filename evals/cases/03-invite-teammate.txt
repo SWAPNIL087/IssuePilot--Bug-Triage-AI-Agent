@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+I want to add a new colleague to our workspace. How do I invite them?

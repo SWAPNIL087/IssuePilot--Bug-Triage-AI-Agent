@@ -1,0 +1,4 @@
+---
+expect: ESCALATE
+---
+What's a good recipe for banana bread?
