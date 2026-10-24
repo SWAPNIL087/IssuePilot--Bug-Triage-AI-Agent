@@ -70,7 +70,8 @@ def create_app():
     token = token or os.environ.get("TRIAGEGUARD_MCP_TOKEN", "")
     if len(token) < 16:  # fail closed: never serve an open endpoint
         raise RuntimeError("Set TRIAGEGUARD_MCP_TOKEN to a secret of at least 16 characters")
-    return BearerAuth(build_server(_tools_from_env()).streamable_http_app(), token)
+    # host=0.0.0.0 turns off the localhost-only Host check, which would reject the public hostname; the bearer token protects it
+    return BearerAuth(build_server(_tools_from_env()).streamable_http_app(host="0.0.0.0"), token)
 
 
 if __name__ == "__main__":

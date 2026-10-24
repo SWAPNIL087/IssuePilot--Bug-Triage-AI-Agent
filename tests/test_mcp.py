@@ -1,3 +1,4 @@
+import json
 import os
 import socket
 import sqlite3
@@ -5,6 +6,7 @@ import tempfile
 import threading
 import time
 import unittest
+import urllib.request
 from contextlib import closing
 from pathlib import Path
 from unittest import mock
@@ -75,6 +77,16 @@ class TestMcpServerOverHttp(unittest.TestCase):
         with self.assertRaisesRegex(ActionError, "invalid"):
             McpTools(self.url, TOKEN).call(
                 "get-order-status", {"order_id": "ORD-1' OR '1'='1", "requester_email": "alice@example.com"})
+
+    def test_accepts_a_public_hostname(self):
+        """Behind a host like onrender.com the Host header is not localhost; it must not be rejected."""
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
+            "protocolVersion": "2025-03-26", "capabilities": {}, "clientInfo": {"name": "t", "version": "1"}}}).encode()
+        req = urllib.request.Request(self.url, data=body, method="POST", headers={
+            "Host": "triageguard-mcp.onrender.com", "Authorization": f"Bearer {TOKEN}",
+            "Content-Type": "application/json", "Accept": "application/json, text/event-stream"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            self.assertEqual(r.status, 200)
 
     def test_full_flow_pipeline_to_database_through_mcp(self):
         runbooks = load_runbooks(ROOT / "mcp" / "runbooks")

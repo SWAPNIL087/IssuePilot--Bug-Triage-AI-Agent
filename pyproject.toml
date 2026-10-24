@@ -12,6 +12,7 @@ dependencies = ["openai>=1.40"]
 [project.optional-dependencies]
 api = ["fastapi>=0.110", "uvicorn>=0.27"]
 actions = ["mcp>=2.3"]                      # MCP tool server and client
+postgres = ["psycopg[binary]>=3.2"]     # Postgres (Neon, Supabase, ...)
 azure = ["pyodbc", "azure-identity"]       # Azure SQL with Managed Identity
 
 [project.scripts]

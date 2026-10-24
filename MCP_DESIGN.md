@@ -55,7 +55,8 @@ Runbooks contain SQL and internals, so they must stay out of the customer search
 
 | Option | Free? | Managed Identity | Verdict |
 |---|---|---|---|
-| **Azure SQL Database, free offer** | Free for the subscription's lifetime: 100k vCore-seconds/month, 32 GB. Choose "auto-pause until next month" at the limit so it can never bill. | Yes (Entra authentication) | **Recommended.** Matches your MI requirement. |
+| **Neon Postgres, free plan** | Free, no card: 1 GB, compute sleeps after 5 idle minutes | No (password); the password lives only in the tool server | **Recommended for the pilot.** Simple signup, column-level grants work, verified here against a real Postgres. |
+| Azure SQL Database, free offer | Free for the subscription's lifetime: 100k vCore-seconds/month, 32 GB (auto-pause at the limit) | Yes (Entra authentication) | Best fit if you need Managed Identity; much heavier setup. Adapter and schema included, untested here. |
 | Azure Database for PostgreSQL (flexible) | Free for 12 months only | Yes (Entra auth) | Good if you prefer Postgres; not lifetime-free |
 | Neon / Supabase free Postgres | Free tier, scale to zero or pause | **No** (password or token) | Fine for dev/demo; secret lives in the MCP server only |
 | SQLite / Docker Postgres | Free | n/a | Local development and tests |
@@ -201,8 +202,8 @@ Read-only first: it removes many "what's my order status" tickets with almost no
 2. **Requester identity:** the trusted caller sets the `customer` field (an email) from its own authentication. A ticket with no valid email is escalated (`identity_unverified`). Text inside the ticket can never set identity.
 3. **Statuses:** `Pending → Invoiced → Completed`, each step needing approval. Anything else is escalated.
 4. **Approval channel:** a signed approval token returned in the API response (`proposal.approval_token`), executed with `POST /actions/approve` using a separate approver token (or `triageguard --approve <token>` locally). Slack or a small admin page can sit on top later.
-5. **Database:** SQLite for development and tests, Azure SQL (free offer, Managed Identity) for the cloud. Runbook SQL is portable: named parameters, `CURRENT_TIMESTAMP`, one statement per block, transaction handled by the executor.
-6. **Tool server:** a standard MCP server (`triageguard.actions.mcp_server`, streamable HTTP, bearer token) in a container, so it can run on Azure Container Apps with a system-assigned Managed Identity. An Azure Functions MCP extension version is possible later.
+5. **Database:** SQLite for development and tests, **Neon Postgres** for the free pilot (Azure SQL with Managed Identity remains supported). Runbook SQL is portable: named parameters, `CURRENT_TIMESTAMP`, one statement per block, transaction handled by the executor.
+6. **Tool server:** a standard MCP server (`triageguard.actions.mcp_server`, streamable HTTP, bearer token) run as a second free Render web service. It is the only holder of the database credential. It could also run in a container on Azure Container Apps.
 
 ## 12. What is built, and what you run
 
@@ -214,7 +215,7 @@ Read-only first: it removes many "what's my order status" tickets with almost no
 | Action flow: choose runbook, validate, authorize, propose or execute, approve | `triageguard/actions/flow.py` |
 | MCP server and client | `triageguard/actions/mcp_server.py`, `mcp_client.py` |
 | API: `proposal` in the ticket response, `POST /actions/approve` | `triageguard/api.py` |
-| Dev database and Azure schema with least-privilege grants | `mcp/schema.sqlite.sql`, `mcp/schema.azuresql.sql` |
+| Dev database; Postgres and Azure schemas with least-privilege grants; grant checker | `mcp/schema.sqlite.sql`, `schema.postgres.sql`, `schema.azuresql.sql`, `triageguard/actions/permcheck.py` |
 | Tests (action flow, MCP over HTTP, API) and 12 action eval cases | `tests/`, `evals/cases/29` to `40` |
 
 ### Run locally (no Azure)
@@ -227,7 +228,7 @@ Read-only first: it removes many "what's my order status" tickets with almost no
 
 | Variable | Purpose |
 |---|---|
-| `TRIAGEGUARD_ACTIONS_DB` | `sqlite:///path` or `azuresql://<server>.database.windows.net/<db>`; with no database or MCP URL, actions are off |
+| `TRIAGEGUARD_ACTIONS_DB` | `sqlite:///path`, `postgresql://user:pass@host/db?sslmode=require` or `azuresql://<server>.database.windows.net/<db>`; with no database or MCP URL, actions are off |
 | `TRIAGEGUARD_MCP_URL`, `TRIAGEGUARD_MCP_TOKEN` | use a remote tool server instead of a direct database connection |
 | `TRIAGEGUARD_APPROVAL_SECRET` | signs approval tokens (16+ chars, required when actions are on) |
 | `TRIAGEGUARD_APPROVER_TOKEN` | bearer token for `POST /actions/approve` (API only) |
@@ -236,4 +237,4 @@ Read-only first: it removes many "what's my order status" tickets with almost no
 ### Known limits
 - The approval gate is enforced in TriageGuard. The tool server trusts a caller holding its token, so protect that token. Hardening: have the tool server verify an approver-signed token itself.
 - Approval tokens are signed, not encrypted, and valid for 24 hours. A replay is harmless: the audit table's primary key and the compare-and-set reject it.
-- The Azure SQL adapter (`pyodbc` plus `azure-identity`) and `Dockerfile.mcp` could not be run without an Azure account; the SQLite path and the MCP protocol path are covered by tests.
+- SQLite, real Postgres (embedded server: least-privilege role, full propose/approve/replay flow) and MCP over HTTP were exercised. The Azure SQL adapter (`pyodbc` plus `azure-identity`) could not be run without an Azure account.
