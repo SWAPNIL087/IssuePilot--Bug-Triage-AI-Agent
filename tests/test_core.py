@@ -54,6 +54,40 @@ class TestIngestAndSearch(unittest.TestCase):
         self.assertTrue(not hits or hits[0].score < CFG.min_score)
 
 
+class TestHybridSearch(unittest.TestCase):
+    """Fake 2-D embeddings: anything about refunds or money is [1, 0], everything else [0, 1]."""
+
+    @staticmethod
+    def fake_embed(texts):
+        return [[1.0, 0.0] if any(w in t.lower() for w in ("refund", "money")) else [0.0, 1.0] for t in texts]
+
+    def test_semantic_finds_what_keywords_miss(self):
+        self.assertFalse(any("refund" in h.chunk.id for h in KB.search("money back", 3)))
+        hits = Retriever(KB.chunks, self.fake_embed).search("money back", 3, "I want my money back")
+        self.assertIn("refund-policy#eligibility", [h.chunk.id for h in hits])
+        self.assertTrue(all(h.sim in (0.0, 1.0) for h in hits))
+
+    def test_embedding_failure_falls_back_to_keywords(self):
+        def broken(texts):
+            raise LLMError("embedding service down")
+        logs = []
+        kb = Retriever(KB.chunks, broken, logs.append)
+        self.assertEqual(kb.search("forgot password reset", 1)[0].chunk.id, RESET.id)
+        self.assertTrue(any("keyword search only" in m for m in logs))
+
+    def test_sensitive_reply_allowed_on_semantic_match_alone(self):
+        kb = Retriever(KB.chunks, self.fake_embed)
+        quote = "New monthly or annual subscriptions can be refunded in full within 14 days of the first purchase."
+        gen = {"decision": "REPLY", "reason": "", "answer": "Yes, a new subscription can be refunded within 14 days.",
+               "citations": [{"chunk_id": "refund-policy#eligibility", "quote": quote}]}
+        analysis = {"sensitive": True, "search_query": "zzz unmatched"}
+        strict = replace(CFG, min_sensitive_score=999.0)  # keyword score can never qualify
+        d = process(Ticket("t1", "I want my money back"), kb, fake_llm(analysis, gen), strict)
+        self.assertEqual((d.decision, d.reason_code), ("REPLY", ""))
+        d = process(Ticket("t1", "I want my money back"), kb, fake_llm(analysis, gen), replace(strict, min_sensitive_sim=1.1))
+        self.assertEqual(d.reason_code, "sensitive_not_covered")
+
+
 class TestLoader(unittest.TestCase):
     def load(self, name, content):
         with tempfile.TemporaryDirectory() as d:

@@ -19,6 +19,7 @@ class TestAPI(unittest.TestCase):
     def setUp(self):
         os.environ["TRIAGEGUARD_API_TOKEN"] = TOKEN
         os.environ.setdefault("OPENAI_API_KEY", "test-key")
+        os.environ["TRIAGEGUARD_EMBED_MODEL"] = ""  # no network in tests
         self.tmp = tempfile.TemporaryDirectory()
         self.ctx = TestClient(api.app)
         self.client = self.ctx.__enter__()

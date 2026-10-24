@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+I can't get into my account, it says it's locked after I typed the wrong password a few times.

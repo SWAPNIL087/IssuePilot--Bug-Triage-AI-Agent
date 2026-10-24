@@ -15,10 +15,16 @@ from openai import (
 from triageguard.config import Config
 
 LLM = Callable[[str, str], dict]
+Embedder = Callable[[list[str]], list[list[float]]]
+Log = Callable[[str], None]
 RETRYABLE = (APITimeoutError, APIConnectionError, RateLimitError, InternalServerError)
 
 
 class LLMError(Exception):
+    pass
+
+
+def _quiet(message: str) -> None:
     pass
 
 
@@ -35,36 +41,69 @@ def check(out, **fields: type) -> dict:
     return out
 
 
-def make_llm(cfg: Config, log: Callable[[str], None] = lambda m: None) -> LLM:
+def _client(cfg: Config) -> OpenAI:
     try:
-        client = OpenAI(timeout=cfg.timeout, max_retries=0)  # retries are done below so they can be logged
+        return OpenAI(timeout=cfg.timeout, max_retries=0)  # retries are done in _request so they can be logged
     except OpenAIError as e:
         raise LLMError(str(e)) from e
 
-    def call(system: str, user: str) -> dict:
-        for attempt in range(cfg.retries + 1):
-            log(f"        calling {cfg.model} (timeout {cfg.timeout:.0f}s)...")
-            start = time.monotonic()
-            try:
-                r = client.chat.completions.create(
-                    model=cfg.model,
-                    temperature=0,
-                    response_format={"type": "json_object"},
-                    messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-                )
-                out = json.loads(r.choices[0].message.content)
-                log(f"        replied in {time.monotonic() - start:.1f}s")
-                return out
-            except RETRYABLE as e:
-                if attempt == cfg.retries or "insufficient_quota" in str(e):
-                    raise LLMError(str(e)) from e
-                wait = _retry_wait(e, attempt)
-                log(f"        {type(e).__name__} after {time.monotonic() - start:.1f}s; "
-                    f"retry {attempt + 1}/{cfg.retries} in {wait:.0f}s")
-                time.sleep(wait)
-            except (OpenAIError, ValueError, TypeError) as e:
+
+def _request(cfg: Config, log: Log, label: str, send: Callable[[], object]):
+    """Run send() with logged retries; every failure becomes LLMError."""
+    for attempt in range(cfg.retries + 1):
+        log(f"        calling {label} (timeout {cfg.timeout:.0f}s)...")
+        start = time.monotonic()
+        try:
+            out = send()
+            log(f"        replied in {time.monotonic() - start:.1f}s")
+            return out
+        except RETRYABLE as e:
+            if attempt == cfg.retries or "insufficient_quota" in str(e):
                 raise LLMError(str(e)) from e
-            except (AttributeError, IndexError) as e:
-                raise LLMError(f"endpoint did not return a chat completion: {e}") from e
+            wait = _retry_wait(e, attempt)
+            log(f"        {type(e).__name__} after {time.monotonic() - start:.1f}s; "
+                f"retry {attempt + 1}/{cfg.retries} in {wait:.0f}s")
+            time.sleep(wait)
+        except (OpenAIError, ValueError, TypeError) as e:
+            raise LLMError(str(e)) from e
+        except (AttributeError, IndexError) as e:
+            raise LLMError(f"endpoint did not return a valid response: {e}") from e
+
+
+def make_llm(cfg: Config, log: Log = _quiet) -> LLM:
+    client = _client(cfg)
+
+    def call(system: str, user: str) -> dict:
+        def send():
+            r = client.chat.completions.create(
+                model=cfg.model,
+                temperature=0,
+                response_format={"type": "json_object"},
+                messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            )
+            return json.loads(r.choices[0].message.content)
+
+        return _request(cfg, log, cfg.model, send)
 
     return call
+
+
+def make_embedder(cfg: Config, log: Log = _quiet) -> Embedder | None:
+    """Text -> vectors for semantic search. None when no embedding model is configured."""
+    if not cfg.embed_model:
+        return None
+    client = _client(cfg)
+
+    def embed(texts: list[str]) -> list[list[float]]:
+        def send():
+            vectors = []
+            for i in range(0, len(texts), 100):
+                r = client.embeddings.create(model=cfg.embed_model, input=texts[i:i + 100])
+                vectors += [d.embedding for d in r.data]
+            if len(vectors) != len(texts):
+                raise ValueError("embedding count does not match input count")
+            return vectors
+
+        return _request(cfg, log, cfg.embed_model, send)
+
+    return embed

@@ -80,7 +80,11 @@ python -m unittest discover -s tests      # no API key needed
 python -m evals.run_evals                 # needs a key; fails if any ticket is replied to when it should escalate
 ```
 
-Tune `TRIAGEGUARD_MIN_SCORE` / `TRIAGEGUARD_MIN_SENSITIVE_SCORE` (see `.env.example`) with the evals.
+Tune the `TRIAGEGUARD_MIN_*` thresholds (see `.env.example`) with the evals.
+
+## Search
+
+Hybrid: BM25 keyword search plus embedding (semantic) similarity, merged so the best hit from each is always a candidate. Semantic search finds paraphrases (\
 
 ## Layout
 

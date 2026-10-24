@@ -7,7 +7,7 @@ from pathlib import Path
 
 from triageguard.config import Config, load_env
 from triageguard.knowledge.ingest import load_docs
-from triageguard.ai.client import LLMError, make_llm
+from triageguard.ai.client import LLMError, make_embedder, make_llm
 from triageguard.intake.loader import SUPPORTED
 from triageguard.actions.output import save, sources
 from triageguard.pipeline import process_file
@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         print(message, flush=True)
 
     try:
-        kb = Retriever(load_docs(cfg.docs, cfg.chunk_words))
+        kb = Retriever(load_docs(cfg.docs, cfg.chunk_words), make_embedder(cfg, log), log)
         llm = make_llm(cfg, log)
     except (ValueError, LLMError) as e:
         return _fail(str(e))
@@ -70,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
             log(f"    {message}")
         if args.debug:
             for r in d.retrieved:
-                log(f"    {r['score']:>6}  {r['chunk_id']}")
+                    log(f"    keyword {r['keyword']:>5}  semantic {r['semantic']:.2f}  {r['chunk_id']}")
         log("")
         if args.inbox and not args.no_move:
             dest = path.parent.parent / ("failed" if d.reason_code in ERRORS else "processed")

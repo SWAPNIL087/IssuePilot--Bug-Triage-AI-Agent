@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 
 from triageguard.actions.escalation import HANDOFF
 from triageguard.actions.output import sources
-from triageguard.ai.client import make_llm
+from triageguard.ai.client import make_embedder, make_llm
 from triageguard.config import Config, load_env
 from triageguard.intake.loader import Ticket, safe_id
 from triageguard.knowledge.ingest import load_docs
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("Set TRIAGEGUARD_API_TOKEN to a secret of at least 16 characters")
     app.state.token = token
     app.state.cfg = cfg = Config.from_env()
-    app.state.kb = Retriever(load_docs(cfg.docs, cfg.chunk_words))
+    app.state.kb = Retriever(load_docs(cfg.docs, cfg.chunk_words), make_embedder(cfg, log), log)
     app.state.llm = make_llm(cfg, log)
     log(f"TriageGuard API ready: {len(app.state.kb.chunks)} chunks, model {cfg.model}")
     yield

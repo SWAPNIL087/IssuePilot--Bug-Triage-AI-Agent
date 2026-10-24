@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+I want to stop paying for this. How do I quit, and do I keep my stuff?

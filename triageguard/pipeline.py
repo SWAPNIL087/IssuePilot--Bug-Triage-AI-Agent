@@ -46,11 +46,12 @@ def process(ticket: Ticket, kb: Retriever, llm: LLM, cfg: Config, log: Log = lam
         if d.analysis["wants_human"]:
             return stop("customer_requested_human", "customer asked for a human")
         log("    [2/4] searching help articles")
-        hits = kb.search(f"{d.analysis['search_query']} {ticket.subject}", cfg.top_k)
-        d.retrieved = [{"chunk_id": h.chunk.id, "score": round(h.score, 2)} for h in hits]
-        best = f"{hits[0].chunk.id} (score {hits[0].score:.1f}, need {cfg.min_score})" if hits else "none"
-        log(f"          best match: {best}")
-        if not hits or hits[0].score < cfg.min_score:
+        hits = kb.search(f"{d.analysis['search_query']} {ticket.subject}", cfg.top_k, ticket.text[:2000])
+        d.retrieved = [{"chunk_id": h.chunk.id, "keyword": round(h.score, 2), "semantic": round(h.sim, 2)}
+                       for h in hits]
+        if hits:
+            log(f"          best match: {hits[0].chunk.id} (keyword {hits[0].score:.1f}, semantic {hits[0].sim:.2f})")
+        if not any(h.score >= cfg.min_score or h.sim >= cfg.min_sim for h in hits):
             return stop("no_relevant_docs", "no help article matches the ticket")
         log("    [3/4] generating answer from the excerpts")
         gen = generate(ticket, hits, llm)

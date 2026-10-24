@@ -1,0 +1,4 @@
+---
+expect: REPLY
+---
+How can I add a colleague to our workspace?
