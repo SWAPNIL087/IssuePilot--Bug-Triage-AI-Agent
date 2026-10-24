@@ -1,6 +1,9 @@
 sample:
 <img width="2297" height="1722" alt="image" src="https://github.com/user-attachments/assets/17fb0495-c156-4498-b47d-f3fa04deb364" />
 
+semantic search:
+![Uploading image.png…]()
+
 
 # TriageGuard
 
