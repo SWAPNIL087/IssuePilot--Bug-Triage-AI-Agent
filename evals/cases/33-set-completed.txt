@@ -1,0 +1,5 @@
+---
+expect: PROPOSED
+customer: alice@example.com
+---
+Order ORD-100002 is finished, please set it to Completed.

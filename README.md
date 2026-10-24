@@ -77,6 +77,10 @@ docker compose up --build      # reads secrets from .env, serves http://localhos
 Render builds the `Dockerfile` for you, so you don't need Docker installed locally. Render > New > Web Service > this repo > Language **Docker** > Instance type **Free** > set Health Check Path to `/health`. Add `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `TRIAGEGUARD_MODEL` and `TRIAGEGUARD_API_TOKEN` as environment variables on the service, never in the repo.
 
 Free instances sleep after 15 minutes idle (the next request takes about a minute), and are not meant for production. Free tiers change often, so check Render's current free-instance docs. Hugging Face Spaces no longer offers Docker Spaces on the free plan.
+## Actions (database changes through MCP)
+
+Beyond answering, the agent can carry out a small set of approved database actions, for example moving a customer's own order to its next status. The LLM only chooses an approved action and fills in values; every SQL statement lives in a reviewed runbook under [mcp/runbooks/](mcp/runbooks), runs through an MCP tool server, and is checked for ownership, allowed transitions and one-row effect. Changes start in approval mode: the response carries a signed token that a human approves with `POST /actions/approve` (or `triageguard --approve <token>`). Works with SQLite (dev), Postgres (Neon free plan) or Azure SQL. Actions are off unless `TRIAGEGUARD_ACTIONS_DB` or `TRIAGEGUARD_MCP_URL` is set. Details, security model and Azure setup: [MCP_DESIGN.md](MCP_DESIGN.md).
+
 ## Test
 
 ```
@@ -101,5 +105,6 @@ triageguard/
 ├─ ai/         client.py  analyzer.py  generator.py   the two LLM calls
 ├─ safety/     validator.py                       code guardrails on the LLM answer
 └─ actions/    escalation.py  output.py           result files; escalation seam
-docs/  tickets/{inbox,processed,failed}/  output/  evals/  tests/
+               runbook.py  db.py  tools.py  flow.py  mcp_server.py  mcp_client.py   approved DB actions (see MCP_DESIGN.md)
+docs/  tickets/{inbox,processed,failed}/  output/  evals/  tests/  mcp/{runbooks,schema.*.sql}
 ```

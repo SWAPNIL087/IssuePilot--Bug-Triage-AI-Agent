@@ -6,3 +6,4 @@ output/
 escalations.jsonl
 tickets/processed/
 tickets/failed/
+mcp/dev.db

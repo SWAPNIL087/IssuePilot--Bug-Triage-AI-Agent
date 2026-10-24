@@ -23,6 +23,9 @@ class Config:
     top_k: int = 5
     min_score: float = 3.0
     min_sensitive_score: float = 5.0
+    runbooks: Path = ROOT / "mcp" / "runbooks"
+    mcp_url: str = ""  # remote MCP tool server, e.g. https://<host>/mcp (token in TRIAGEGUARD_MCP_TOKEN)
+    actions_db: str = ""  # e.g. sqlite:///mcp/dev.db or azuresql://<server>/<db>; empty = actions off
     embed_model: str = "text-embedding-3-small"  # "" turns semantic search off
     min_sim: float = 0.68
     min_sensitive_sim: float = 0.70
@@ -40,6 +43,9 @@ class Config:
             min_sensitive_score=float(
                 env("TRIAGEGUARD_MIN_SENSITIVE_SCORE", cls.min_sensitive_score)
             ),
+            mcp_url=env("TRIAGEGUARD_MCP_URL", cls.mcp_url),
+            actions_db=env("TRIAGEGUARD_ACTIONS_DB", cls.actions_db),
+            runbooks=Path(env("TRIAGEGUARD_RUNBOOKS", str(cls.runbooks))),
             embed_model=env("TRIAGEGUARD_EMBED_MODEL", cls.embed_model),
             min_sim=float(env("TRIAGEGUARD_MIN_SIM", cls.min_sim)),
             min_sensitive_sim=float(env("TRIAGEGUARD_MIN_SENSITIVE_SIM", cls.min_sensitive_sim)),

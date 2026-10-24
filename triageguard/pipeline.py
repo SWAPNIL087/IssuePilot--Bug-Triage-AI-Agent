@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from triageguard.actions.flow import Actions, run_action
 from triageguard.ai.analyzer import analyze
 from triageguard.config import Config
 from triageguard.ai.generator import generate
@@ -26,11 +27,13 @@ class Decision:
     citations: list = field(default_factory=list)
     analysis: dict = field(default_factory=dict)
     retrieved: list = field(default_factory=list)
+    action: dict = field(default_factory=dict)
     model: str = ""
     processed_at: str = field(default_factory=lambda: datetime.now().astimezone().isoformat(timespec="seconds"))
 
 
-def process(ticket: Ticket, kb: Retriever, llm: LLM, cfg: Config, log: Log = lambda m: None) -> Decision:
+def process(ticket: Ticket, kb: Retriever, llm: LLM, cfg: Config, log: Log = lambda m: None,
+            actions: Actions | None = None) -> Decision:
     d = Decision(ticket.id, model=cfg.model)
 
     def stop(code: str, reason: str) -> Decision:
@@ -41,10 +44,12 @@ def process(ticket: Ticket, kb: Retriever, llm: LLM, cfg: Config, log: Log = lam
         return stop("attachment_unreadable", "ticket refers to an attachment we cannot read")
     try:
         log("    [1/4] analyzing ticket")
-        d.analysis = analyze(ticket, llm)
+        d.analysis = analyze(ticket, llm, actions.runbooks if actions else None)
         log(f"          sensitive={d.analysis['sensitive']}, search query: {d.analysis['search_query']!r}")
         if d.analysis["wants_human"]:
             return stop("customer_requested_human", "customer asked for a human")
+        if d.analysis["action"]:
+            return run_action(d, ticket, d.analysis, actions, log)
         log("    [2/4] searching help articles")
         hits = kb.search(f"{d.analysis['search_query']} {ticket.subject}", cfg.top_k, ticket.text[:2000])
         d.retrieved = [{"chunk_id": h.chunk.id, "keyword": round(h.score, 2), "semantic": round(h.sim, 2)}
@@ -68,10 +73,11 @@ def process(ticket: Ticket, kb: Retriever, llm: LLM, cfg: Config, log: Log = lam
     return d
 
 
-def process_file(path: Path, kb: Retriever, llm: LLM, cfg: Config, log: Log = lambda m: None) -> tuple[Ticket, Decision]:
+def process_file(path: Path, kb: Retriever, llm: LLM, cfg: Config, log: Log = lambda m: None,
+                 actions: Actions | None = None) -> tuple[Ticket, Decision]:
     try:
         ticket = load_ticket(path, cfg.max_ticket_bytes)
     except TicketError as e:
         ticket = Ticket(id=Path(path).stem, body="")
         return ticket, Decision(ticket.id, reason_code="invalid_ticket", reason=str(e), model=cfg.model)
-    return ticket, process(ticket, kb, llm, cfg, log)
+    return ticket, process(ticket, kb, llm, cfg, log, actions)

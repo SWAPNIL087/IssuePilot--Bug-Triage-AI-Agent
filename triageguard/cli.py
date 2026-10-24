@@ -5,12 +5,15 @@ from collections import Counter
 from dataclasses import replace
 from pathlib import Path
 
+from triageguard.actions.flow import approve
+from triageguard.actions.runbook import ActionError, RunbookError
+from triageguard.actions.tools import build_actions
 from triageguard.config import Config, load_env
 from triageguard.knowledge.ingest import load_docs
 from triageguard.ai.client import LLMError, make_embedder, make_llm
 from triageguard.intake.loader import SUPPORTED
 from triageguard.actions.output import save, sources
-from triageguard.pipeline import process_file
+from triageguard.pipeline import Decision, process_file
 from triageguard.knowledge.retriever import Retriever
 
 ERRORS = {"invalid_ticket", "llm_error"}
@@ -19,6 +22,7 @@ ERRORS = {"invalid_ticket", "llm_error"}
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="triageguard", description="Reply from the help docs or escalate.")
     mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--approve", metavar="TOKEN", help="execute a proposed action a human approved")
     mode.add_argument("--ticket", type=Path, help="process one ticket file")
     mode.add_argument("--inbox", type=Path, help="process every ticket file in a folder")
     ap.add_argument("--docs", type=Path, help="help-article folder (default: docs/)")
@@ -33,7 +37,9 @@ def main(argv: list[str] | None = None) -> int:
     cfg = Config.from_env()
     cfg = replace(cfg, docs=args.docs or cfg.docs, output=args.output or cfg.output)
 
-    if args.ticket:
+    if args.approve:
+        files = []
+    elif args.ticket:
         if not args.ticket.is_file():
             return _fail(f"ticket not found: {args.ticket}")
         files = [args.ticket]
@@ -48,8 +54,16 @@ def main(argv: list[str] | None = None) -> int:
     try:
         kb = Retriever(load_docs(cfg.docs, cfg.chunk_words), make_embedder(cfg, log), log)
         llm = make_llm(cfg, log)
-    except (ValueError, LLMError) as e:
+        actions = build_actions(cfg)
+    except (ValueError, LLMError, ActionError, RunbookError) as e:
         return _fail(str(e))
+
+    if args.approve:
+        if actions is None:
+            return _fail("actions are not configured (set TRIAGEGUARD_ACTIONS_DB)")
+        d = approve(Decision("approval"), args.approve, actions)
+        log(f"{d.decision}  " + (d.answer or f"{d.reason_code}: {d.reason}"))
+        return 0 if d.decision == "EXECUTED" else 1
 
     articles = len({c.id.split("#")[0] for c in kb.chunks})
     log(f"TriageGuard ready. {articles} articles loaded. Model: {cfg.model}. {len(files)} ticket(s) to process.\n")
@@ -60,25 +74,27 @@ def main(argv: list[str] | None = None) -> int:
             log(f"[{i}/{len(files)}] {path.name}  skipped (unsupported file type)")
             continue
         log(f"[{i}/{len(files)}] {path.name}")
-        ticket, d = process_file(path, kb, llm, cfg, log)
+        ticket, d = process_file(path, kb, llm, cfg, log, actions)
         message = save(ticket, d, kb, cfg)
         counts[d.decision] += 1
         counts["errors"] += d.reason_code in ERRORS
-        detail = "; ".join(sources(d, kb)) if d.decision == "REPLY" else f"{d.reason_code}: {d.reason}"
+        detail = "; ".join(sources(d, kb)) if d.citations else (d.reason or d.action.get("runbook_id", ""))
         log(f"    → {d.decision}  ({detail})")
         if args.ticket or args.debug:
             log(f"    {message}")
+        if d.decision == "PROPOSED":
+            log(f"    to approve: triageguard --approve {d.action['approval_token']}")
         if args.debug:
             for r in d.retrieved:
-                    log(f"    keyword {r['keyword']:>5}  semantic {r['semantic']:.2f}  {r['chunk_id']}")
+                log(f"    keyword {r['keyword']:>5}  semantic {r['semantic']:.2f}  {r['chunk_id']}")
         log("")
         if args.inbox and not args.no_move:
             dest = path.parent.parent / ("failed" if d.reason_code in ERRORS else "processed")
             dest.mkdir(exist_ok=True)
             os.replace(path, dest / path.name)
 
-    print(f"\nSummary: {counts['REPLY']} replied, {counts['ESCALATE']} escalated, "
-          f"{counts['errors']} errors. Results in {cfg.output}")
+    print(f"\nSummary: {counts['REPLY']} replied, {counts['EXECUTED']} executed, {counts['PROPOSED']} awaiting approval, "
+          f"{counts['NEEDS_INFO']} need info, {counts['ESCALATE']} escalated, {counts['errors']} errors. Results in {cfg.output}")
     return 1 if counts["errors"] else 0
 
 

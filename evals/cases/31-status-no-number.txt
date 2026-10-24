@@ -1,0 +1,5 @@
+---
+expect: NEEDS_INFO
+customer: alice@example.com
+---
+What is the status of my order?

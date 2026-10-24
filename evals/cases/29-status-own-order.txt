@@ -1,0 +1,5 @@
+---
+expect: REPLY
+customer: alice@example.com
+---
+Where is my order ORD-100001? What is its status?
