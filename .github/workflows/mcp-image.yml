@@ -1,0 +1,29 @@
+name: mcp-image
+# Builds the MCP tool server image and publishes it to GitHub Container Registry (free).
+# After the first run, open the package on GitHub and set its visibility to Public so Azure can pull it.
+on:
+  push:
+    branches: [main]
+    paths: ["triageguard/**", "mcp/runbooks/**", "Dockerfile.mcp", "pyproject.toml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.mcp
+          push: true
+          tags: ghcr.io/swapnil087/triageguard-mcp:latest
