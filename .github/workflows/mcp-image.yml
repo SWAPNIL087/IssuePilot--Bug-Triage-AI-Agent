@@ -4,7 +4,7 @@ name: mcp-image
 on:
   push:
     branches: [main, mcp-actions]  # mcp-actions lets you publish the image before merging
-    paths: ["triageguard/**", "mcp/runbooks/**", "Dockerfile.mcp", "pyproject.toml"]
+    paths: ["triageguard/**", "mcp/runbooks/**", "Dockerfile.mcp", "pyproject.toml", ".github/workflows/mcp-image.yml"]
   workflow_dispatch:
 
 permissions:
