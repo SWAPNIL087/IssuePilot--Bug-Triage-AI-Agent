@@ -1,0 +1,5 @@
+---
+expect: PROPOSED
+customer: alice@example.com
+---
+Please mark order ORD-100001 as Invoiced.

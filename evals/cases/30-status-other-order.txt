@@ -1,0 +1,5 @@
+---
+expect: ESCALATE
+customer: alice@example.com
+---
+What is the status of order ORD-100003?

@@ -7,6 +7,7 @@ COPY pyproject.toml README.md ./
 COPY triageguard ./triageguard
 RUN pip install --no-cache-dir -e ".[api]"
 COPY docs ./docs
+COPY mcp/runbooks ./mcp/runbooks
 
 RUN useradd --create-home app && chown -R app /app
 USER app

@@ -5,6 +5,7 @@
 *.egg-info
 output
 escalations.jsonl
+mcp/dev.db
 tickets
 evals
 tests
