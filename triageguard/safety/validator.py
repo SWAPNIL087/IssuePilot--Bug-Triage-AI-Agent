@@ -37,7 +37,8 @@ def validate(gen: dict, hits: list[Hit], sensitive: bool, cfg: Config) -> tuple[
             return fail(f"detail not in cited text: {fact}")
 
     if sensitive:
-        policy = [h for h in cited if h.chunk.type == "policy"]
-        if not policy or max(h.score for h in policy) < cfg.min_sensitive_score:
+        policy = [h for h in cited if h.chunk.type == "policy"
+                  and (h.score >= cfg.min_sensitive_score or h.sim >= cfg.min_sensitive_sim)]
+        if not policy:
             return "sensitive_not_covered", "sensitive topic without a strongly matching policy article"
     return None

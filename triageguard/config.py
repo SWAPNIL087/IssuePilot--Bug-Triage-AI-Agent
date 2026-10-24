@@ -23,6 +23,9 @@ class Config:
     top_k: int = 5
     min_score: float = 3.0
     min_sensitive_score: float = 5.0
+    embed_model: str = "text-embedding-3-small"  # "" turns semantic search off
+    min_sim: float = 0.68
+    min_sensitive_sim: float = 0.70
     max_ticket_bytes: int = 20480
     chunk_words: int = 220
     timeout: float = 30.0
@@ -37,4 +40,7 @@ class Config:
             min_sensitive_score=float(
                 env("TRIAGEGUARD_MIN_SENSITIVE_SCORE", cls.min_sensitive_score)
             ),
+            embed_model=env("TRIAGEGUARD_EMBED_MODEL", cls.embed_model),
+            min_sim=float(env("TRIAGEGUARD_MIN_SIM", cls.min_sim)),
+            min_sensitive_sim=float(env("TRIAGEGUARD_MIN_SENSITIVE_SIM", cls.min_sensitive_sim)),
         )

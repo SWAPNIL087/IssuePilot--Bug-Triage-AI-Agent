@@ -6,7 +6,7 @@ from pathlib import Path
 from triageguard.config import Config, load_env
 from triageguard.frontmatter import split_front_matter
 from triageguard.knowledge.ingest import load_docs
-from triageguard.ai.client import make_llm
+from triageguard.ai.client import make_embedder, make_llm
 from triageguard.pipeline import process_file
 from triageguard.knowledge.retriever import Retriever
 
@@ -16,13 +16,14 @@ CASES = Path(__file__).parent / "cases"
 def main() -> int:
     load_env()
     cfg = Config.from_env()
-    kb = Retriever(load_docs(cfg.docs, cfg.chunk_words))
     log = (lambda m: print(m, flush=True)) if "-v" in sys.argv else (lambda m: None)
+    kb = Retriever(load_docs(cfg.docs, cfg.chunk_words), make_embedder(cfg, log), log)
     llm = make_llm(cfg, log)
 
     tally = Counter()
     cases = sorted(CASES.iterdir())
-    print(f"Running {len(cases)} cases with {cfg.model} (add -v for step-by-step logs)", flush=True)
+    print(f"Running {len(cases)} cases with {cfg.model} + {cfg.embed_model or 'keyword search only'} "
+          f"(add -v for step-by-step logs)", flush=True)
     for i, path in enumerate(cases, 1):
         print(f"[{i}/{len(cases)}] {path.stem} ...", flush=True)
         expect = split_front_matter(path.read_text(encoding="utf-8"))[0]["expect"]
