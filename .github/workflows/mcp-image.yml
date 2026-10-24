@@ -3,7 +3,7 @@ name: mcp-image
 # After the first run, open the package on GitHub and set its visibility to Public so Azure can pull it.
 on:
   push:
-    branches: [main]
+    branches: [main, mcp-actions]  # mcp-actions lets you publish the image before merging
     paths: ["triageguard/**", "mcp/runbooks/**", "Dockerfile.mcp", "pyproject.toml"]
   workflow_dispatch:
 
